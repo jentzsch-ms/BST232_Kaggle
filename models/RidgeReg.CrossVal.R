@@ -1,9 +1,10 @@
 RidgeReg.CrossVal <- function(Y, DF, K, Ls){
-  #This function performs K-fold cross-validation on ridge regression. Requires the MXM package.
+  #This function performs K-fold cross-validation on ridge regression. 
+  #Requires the MXM package.
   
   #Y - response variable (vector).
-  #DF - design matrix which should include a column of ones for the intercept term (matrix/DF)/
-  #K - number of K-fold cross-validation.
+  #DF - dataframe containing covariates (matrix).
+  #K - number of K-fold cross-validations.
   #Ls - sequence of lambdas to try for the ridge regression (vector).
   
   #Set seed for reproducibility and shuffle the data.
@@ -11,6 +12,14 @@ RidgeReg.CrossVal <- function(Y, DF, K, Ls){
   shuffle.index <- sample(nrow(DF), replace=FALSE)
   DF <- DF[shuffle.index,]
   Y <- Y[shuffle.index]
+  
+  #Variables.
+  vars <- c("manganese", "manganese2",
+            "lead", "lead2",
+            "arsenic", "arsenic2",
+            "home.quality", "age.centered",
+            "eggs", "fish", "smoking",
+            "education", "IQ")
   
   #Create K-folds.
   folds <- cut(seq(1, nrow(DF)), breaks=K, labels=FALSE)
@@ -22,21 +31,29 @@ RidgeReg.CrossVal <- function(Y, DF, K, Ls){
     
     #Loop over each K-fold.
     RMSE.CrossVal <- matrix(0,K,1)
+    coeff <- numeric()
     for(k in 1:K){
       #Split data.
       test.index <- which(folds==k, arr.ind=TRUE)
       
-      test.data <- DF[test.index, ]
+      test.data <- cbind(1,DF[test.index, vars])
       test.target <- Y[test.index]
       
-      train.data <- DF[-test.index, ]
+      train.data <- cbind(1,DF[-test.index, vars])
       train.target <- Y[-test.index]
       
-      #Use ridge regression to make predictions on the test set and calculate prediction RMSE.
-      beta <- ridge.reg(train.target, train.data, L, B=1)$beta
-      test.predict <- test.data %*% matrix(beta)
-      SSE <- sum((test.predict - test.target)^2)
-      RMSE.CrossVal[k] <- sqrt(mean(SSE))
+      #Use regression to make predictions on the test set and calculate RMSPE.
+      #fit <- lm(train.target~manganese+manganese2+
+      #            lead+lead2+
+      #            +arsenic+arsenic2+
+      #            home.quality+age.centered+eggs+fish+smoking+education+IQ,
+      #          data=train.data) #model for submission
+      fit <- ridge.reg(train.target, train.data, lambda=L, B=1)
+      coeff <- rbind(coeff, fit$beta)
+      print(head(test.data))
+      test.predict <- test.data %*% matrix(fit$beta)
+      MSPE <- mean((test.predict - test.target)^2)
+      RMSE.CrossVal[k] <- sqrt(MSPE)
     }
     RMSE[i] <- mean(RMSE.CrossVal)
   }
@@ -45,6 +62,6 @@ RidgeReg.CrossVal <- function(Y, DF, K, Ls){
        xlab="Lambda", ylab="RMSE of Validation Set",
        main="Results of K-Fold Cross Validation with Ridge Regression")
   
-  best.RMSE.index <- which(RMSE==min(RMSE))
-  return(best.lambda=Ls[best.RMSE.index])
+  print(RMSE)
+  return(coeff)
 }
