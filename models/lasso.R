@@ -61,39 +61,46 @@ X <- data.matrix(DF.train[,vars])
 Y <- DF.train$cog.score
 fit <- glmnet(X, Y)
 
-#Set seed for reproducibility and shuffle the data.
-set.seed(0)
-K <- 10
-shuffle.index <- sample(nrow(X), replace=FALSE)
-DF <- X[shuffle.index,]
-Y <- Y[shuffle.index]
+MSE.CrossVal <- function(lambda){
 
-folds <- cut(seq(1, nrow(DF)), breaks=K, labels=FALSE)
-
-RMSE.CrossVal <- NULL
-for(k in 1:K){
-  #Split data.
-  test.index <- which(folds==k, arr.ind=TRUE)
+  #Set seed for reproducibility and shuffle the data.
+  set.seed(0)
+  K <- 10
+  shuffle.index <- sample(nrow(X), replace=FALSE)
+  DF <- X[shuffle.index,]
+  Y <- Y[shuffle.index]
   
-  test.data <- DF[test.index,]
-  test.target <- Y[test.index]
+  folds <- cut(seq(1, nrow(DF)), breaks=K, labels=FALSE)
   
-  train.data <- DF[-test.index,]
-  train.target <- Y[-test.index]
+  RMSE.CrossVal <- NULL
+  for(k in 1:K){
+    #Split data.
+    test.index <- which(folds==k, arr.ind=TRUE)
+    
+    test.data <- DF[test.index,]
+    test.target <- Y[test.index]
+    
+    train.data <- DF[-test.index,]
+    train.target <- Y[-test.index]
+    
+    #Remove low outliers.
+    keep.index <- train.target>mean(train.target)-3*sd(train.target)
+    train.data <- train.data[keep.index,]
+    train.target <- train.target[keep.index]
+    
+    fit <- glmnet(train.data, train.target, thresh=1e-10, lambda=lambda^2)
+    
+    test.predict <- predict(fit, test.data)
+    Y.hat <- test.predict[,dim(test.predict)[2]]
+    
+    MSPE <- (Y.hat - test.target)^2
+    RMSE.CrossVal <- c(RMSE.CrossVal, sqrt(MSPE))
+  }
   
-  #Remove low outliers.
-  keep.index <- train.target>mean(train.target)-3*sd(train.target)
-  train.data <- train.data[keep.index,]
-  train.target <- train.target[keep.index]
-  
-  fit <- glmnet(train.data, train.target, thresh=1e-10)
-  
-  test.predict <- predict(fit, test.data)
-  Y.hat <- test.predict[,dim(test.predict)[2]]
-  
-  MSPE <- (Y.hat - test.target)^2
-  RMSE.CrossVal <- c(RMSE.CrossVal, sqrt(MSPE))
+  mean(RMSE.CrossVal)^2
 }
 
-hist(RMSE.CrossVal)
-mean(RMSE.CrossVal)
+fit <- optim(1, MSE.CrossVal, method="BFGS", control=list(REPORT=1, trace=3))
+lambda <- fit$par^2
+RMSE <- sqrt(fit$value)
+print(RMSE)
