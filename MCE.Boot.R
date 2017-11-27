@@ -1,13 +1,12 @@
 rm(list = ls())
 set.seed(0)
-#library(tidyverse)
 
 #Read in the data.
 train.dat <- read.csv("train.csv", header = TRUE)
 test.dat <- read.csv("test.csv", header = TRUE)
 
-#Remove outliers.
-train.dat[-c(15, 46, 123, 226),]
+#Remove outliers excluded from causal model.
+train.dat <- train.dat[-c(15, 46, 226, 391),]
 
 #Label variables.
 colnames(test.dat) <- c("ID","manganese", "arsenic", "lead", 
@@ -61,6 +60,8 @@ print(txt, quote=FALSE)
 B <- 1e4
 n.samples <- dim(train.dat)[1]
 causal <- matrix(0,B,1)
+boot.lead.mean <- matrix(0,B,1)
+boot.arsenic.mean <- matrix(0,B,1)
 
 for(i in 1:B){
   sample <- sample(n.samples, n.samples, replace=TRUE)
@@ -81,6 +82,10 @@ for(i in 1:B){
   
   causal[i] <- beta.manganese*13+beta.manganese2*(17^2-4^2)+
     beta.mxa*arsenic.mean*13 + beta.mxl*lead.mean*13
+  
+  #Bootstrapped arsenic and lead means for quality control.
+  boot.arsenic.mean[i] <- arsenic.mean
+  boot.lead.mean[i] <- lead.mean
 }
 
 #Histogram of results.
@@ -92,7 +97,7 @@ hist(causal, freq=FALSE, xlim=c(-1.5,0.5),
 lines(density(causal), col="red", lwd=2)
 dev.off()
 
-#Print point estimate and 95% CI.
+#Print point estimate and 95% 
 causal.mean <- mean(causal)
 LB <- quantile(causal, 0.025)
 UB <- quantile(causal, 0.975)
