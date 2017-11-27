@@ -1,9 +1,9 @@
 # Causal Model
 library(tidyverse)
 
-train_dat <- read.csv("train.csv") %>%
+train_dat <- read.csv("./data/train.csv") %>%
       mutate(X1X1 = X1*X1) %>% select(-c(ID,Z1))
-test_dat <- read.csv("test.csv") %>%
+test_dat <- read.csv("./data/test.csv") %>%
       mutate(X1X1 = X1*X1) %>% select(-c(ID,Z1))
 pop_dat <- rbind(subset(train_dat, select=-Y), test_dat)
 
@@ -45,7 +45,9 @@ for (i in 1:ncol(multico_dat)) {
       print(vif)
 }
 
-summary(lm(Y~., train_dat))
+test model <- lm(Y~., train_dat))
+
+
 
 
 
