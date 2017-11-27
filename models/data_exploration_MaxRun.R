@@ -1,13 +1,10 @@
 rm(list = ls())
 library(MXM)
-source("RidgeReg.CrossVal1.R")
-source("RidgeReg.CrossVal2.R")
-source("RidgeReg.CrossVal3.R")
-source("RidgeReg.CrossVal4.R")
+source("./models/RidgeReg.CrossVal_MaxRun.R")
 
 #Load data and label columns.
-DF.test <- read.csv("test.csv", header=TRUE)
-DF.train <- read.csv("train.csv", header=TRUE)
+DF.test <- read.csv("./data/test.csv", header=TRUE)
+DF.train <- read.csv("./data/train.csv", header=TRUE)
 
 vars <- c("ID", "manganese", "arsenic", "lead",
           "age", "education", "age.centered", "IQ", "home.quality",
@@ -98,5 +95,5 @@ step(lm(cog.score~1, data=DF.train),~manganese+arsenic+lead+education+age.center
 #includes manganese, fish, home.quality, arsenicXsmoking, age.centered, education,
 #arsenic, eggs.
 
-coeff <- RidgeReg.CrossVal1(DF.train$cog.score, DF.train, 10, 0)
+coeff <- RidgeReg.CrossVal1(DF.train$cog.score, DF.train, 10, 10^(-5))
 beta <- matrix(colMeans(coeff))

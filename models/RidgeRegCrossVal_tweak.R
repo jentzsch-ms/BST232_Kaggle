@@ -113,20 +113,30 @@ RidgeReg.CrossVal <- function(Y, DF, K, Ls, vars){
        main="Results of K-Fold Cross Validation with Ridge Regression")
   
   print(RMSE)
-  return(coeff)
+  return(fit)
 }
 
 library(MXM)
+library(glmnet)
 
 dropvars <- c("ID", "Y")
 DF <- train.dat[,(!names(train.dat) %in% dropvars)]
 
-RidgeReg.CrossVal(Y = train.dat$Y,
+# all variables
+regfit <- RidgeReg.CrossVal(Y = train.dat$Y,
                   DF = DF,
                   K = 10, 
-                  Ls = c(0,0.0001,0.001, 0.01, 0.1,1), 
+                  Ls = c(0,0.0001,0.001, 0.01, 0.1, 0.398,1), 
                   vars)
 
+# run prediction on the test dataset
+newdat <- model.matrix(~., data = test.dat[,-1])
+pred.out <- predict.glmnet(regfit, newx = newdat)
+pred.out <- cbind(test.dat$ID, pred.out)
+colnames(pred.out) <- c("ID", "Y")
+write.csv(pred.out, file = "./results/glmnet_max_2017-11-25.csv")
+
+# Raffi's variables
 vars2 <-  c("manganese", "manganese2",
                      "lead", "lead2",
                      "arsenic", "arsenic2",
@@ -139,3 +149,17 @@ RidgeReg.CrossVal(Y = train.dat$Y,
                   K = 10, 
                   Ls = c(0,0.0001, 0.001, 0.01, 0.1, 1), 
                   vars = vars2)
+
+# Raffi's variables potentially adjusting for incorrect labels?
+vars3 <- c("manganese", "manganese2",
+           "lead", "lead2",
+           "arsenic", "arsenic2",
+           "home.quality", "age.mother.centered",
+           "meat", "fish", "smoking",
+           "education", "IQ")
+
+RidgeReg.CrossVal(Y = train.dat$Y,
+                  DF = DF,
+                  K = 10, 
+                  Ls = c(0,0.0001, 0.001, 0.01, 0.1, 1), 
+                  vars = vars3)

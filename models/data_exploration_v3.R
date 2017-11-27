@@ -75,3 +75,4 @@ step(lm(cog.score~1, data=DF.train),~manganese+arsenic+lead+education+age.center
 
 coeff <- RidgeReg.CrossVal(DF.train$cog.score, DF.train, 10, c(0,1,10,100))
 beta <- matrix(colMeans(coeff))
+
