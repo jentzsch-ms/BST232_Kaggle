@@ -134,3 +134,14 @@ write.csv(pred_causal_orm.out, file = "./results/pred_causal_orm.csv", row.names
 # obtain in-sample RMSE, outliers removed (orm)
 rmse_causal_orm <- sqrt(mean((outrm2.dat$Y - m.causal$fitted.values)^2))
 rmse_causal_orm
+
+##################################
+#   MISC
+##################################
+
+### F-test for squared terms
+
+# minimal model (without squared terms)
+m.min <- lm(Y ~ manganese + arsenic + lead  + education + age.mother.centered + IQ + egg + meat + fish + smoking, data = train.dat)
+
+anova(m.min, m.base)
