@@ -78,6 +78,59 @@ lbar <- mean(test.dat$lead)
 abar <- mean(test.dat$arsenic)
 
 # 2. obtain the point estimate
-v <- matrix(c(17,17^2,17*lbar, 17*abar), nrow = 1, byrow = T)
+v <- matrix(c(13,(17^2-4^2),13*lbar, 13*abar), nrow = 1, byrow = T)
 MCE <- v %*% as.matrix(coeffs)
 MCE
+
+############################################
+#       REGRESSION DIAGNOSTICS
+###########################################
+
+plot(m.intxn) # looks like 226, 391, and 46 are outliers
+
+outrm.dat <- train.dat[-c(226,391,46),]
+m.orm <- lm(Y ~ manganese + arsenic + lead + education + age.mother.centered + IQ  + egg + meat + fish + smoking + arsenic2 + manganese2 + lead2 + mxa + mxl + axl, data = outrm.dat) 
+
+plot(m.orm) # maybe exclude 15 too?
+
+
+outrm2.dat <- train.dat[-c(226,391,46,15),]
+m.orm2 <- lm(Y ~ manganese + arsenic + lead + education + age.mother.centered + IQ  + egg + meat + fish + smoking + arsenic2 + manganese2 + lead2 + mxa + mxl + axl, data = outrm2.dat) 
+
+plot(m.orm2) # looks a lot better. This is the final causal model
+
+m.causal <- m.orm2
+
+MCE <- function(dat, mod){
+  coi <- c("manganese", "manganese2", "mxl", "mxa")
+  coeffs <- coefficients(mod)
+  coeffs <- coeffs[names(coeffs) %in% coi]
+  print(coeffs)
+  
+  ### Determining point estimate
+  
+  # 1. determine average values
+  lbar <- mean(dat$lead) 
+  abar <- mean(dat$arsenic)
+  
+  # 2. obtain the point estimate
+  v <- matrix(c(13,(17^2-4^2),13*abar, 13*lbar), nrow = 1, byrow = T)
+  MCE <- v %*% as.matrix(as.numeric(coeffs))
+  
+  return(MCE)
+}
+
+MCE(outrm2.dat, m.orm2)
+
+####################################
+#   PREDICTION, OUTLIERS REMOVED
+####################################
+
+pred_causal_orm <- predict.lm(m.orm2, newdat = test.data)
+pred_causal_orm.out <- cbind(test.dat$ID, pred_causal_orm)
+colnames(pred_causal_orm.out) <- c("ID", "Y")
+write.csv(pred_causal_orm.out, file = "./results/pred_causal_orm.csv", row.names = F)
+
+# obtain in-sample RMSE, outliers removed (orm)
+rmse_causal_orm <- sqrt(mean((outrm2.dat$Y - m.causal$fitted.values)^2))
+rmse_causal_orm
